@@ -1,0 +1,32 @@
+[
+  {
+    "Date": "2024-01-01",
+    "TemperatureC": 25,
+    "TemperatureF": 77,
+    "Summary": "Clear"
+  },
+  {
+    "Date": "2024-01-02",
+    "TemperatureC": 18,
+    "TemperatureF": 64,
+    "Summary": "Partly Cloudy"
+  },
+  {
+    "Date": "2024-01-03",
+    "TemperatureC": 22,
+    "TemperatureF": 72,
+    "Summary": "Cloudy"
+  },
+  {
+    "Date": "2024-01-04",
+    "TemperatureC": 30,
+    "TemperatureF": 86,
+    "Summary": "Rain"
+  },
+  {
+    "Date": "2024-01-05",
+    "TemperatureC": 16,
+    "TemperatureF": 61,
+    "Summary": "Clear"
+  }
+]
