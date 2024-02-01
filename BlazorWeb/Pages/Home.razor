@@ -2,79 +2,290 @@
 @using BlazorWeb.Models
 @using Microsoft.AspNetCore.Components.Web.Extensions
 @using Microsoft.AspNetCore.SignalR.Client
-@using System.Text.Json
 @using System.Text
 @using System.Security.Cryptography
+@using Newtonsoft.Json.Bson;
+@using Newtonsoft.Json;
 @inject IJSRuntime _jsRuntime
 
 <PageTitle>Home</PageTitle>
 
-<h1>Weather Forecasts</h1>
+<h1 class="text-center">Weather Forecasts</h1>
 
+<div class="row">
+    <div class="col-6">
+        <h2>
+            Data from Binary
+        </h2>
+        <p>Start time (UTC): @(StartTimeFromBinary.HasValue ? StartTimeFromBinary.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <hr />
 
-@if (_weatherForecasts != null)
-{
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Date</th>
-                <th>TemperatureC</th>
-                <th>TemperatureF</th>
-                <th>Summary</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach (var forecast in _weatherForecasts)
+        <p>Start Encrypted (UTC): @(StartTimeEncrypted.HasValue ? StartTimeEncrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>End Encrypted (UTC): @(EndTimeEncrypted.HasValue ? EndTimeEncrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>Total time Encrypted (UTC): @(EndTimeEncrypted.HasValue && StartTimeEncrypted.HasValue ? $"{EndTimeEncrypted.Value.Subtract(StartTimeEncrypted.Value).TotalSeconds} s" : string.Empty)</p>
+        <hr />
+
+        <p>Response Time - API (UTC): @(EndTimeResponseFromBinary.HasValue ? EndTimeResponseFromBinary.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>Total time Response - API (UTC): @(EndTimeResponseFromBinary.HasValue && StartTimeFromBinary.HasValue ? $"{EndTimeResponseFromBinary.Value.Subtract(StartTimeFromBinary.Value).TotalSeconds} s" : string.Empty)</p>
+        <hr />
+
+        <p>Start Decrypted (UTC): @(StartTimeDecrypted.HasValue ? StartTimeDecrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>End Decrypted (UTC): @(EndTimeDecrypted.HasValue ? EndTimeDecrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>Total time Decrypted (UTC): @(EndTimeDecrypted.HasValue && StartTimeDecrypted.HasValue ? $"{EndTimeDecrypted.Value.Subtract(StartTimeDecrypted.Value).TotalSeconds} s" : string.Empty)</p>
+        <hr />
+
+        <p>End time (UTC): @(EndTimeFromBinary.HasValue ? EndTimeFromBinary.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>Total time Render view (UTC): @(EndTimeFromBinary.HasValue && EndTimeResponseFromBinary.HasValue ? $"{EndTimeFromBinary.Value.Subtract(EndTimeResponseFromBinary.Value).TotalSeconds} s" : string.Empty)</p>
+        <hr />
+
+        <p>Total time (UTC): @(EndTimeFromBinary.HasValue && StartTimeFromBinary.HasValue ? $"{EndTimeFromBinary.Value.Subtract(StartTimeFromBinary.Value).TotalSeconds} s" : string.Empty)</p>
+        <div>
+            <button class="btn btn-primary" disabled="@(IsGetDataFromBinary || IsGetDataFromJson)" @onclick="() => GetDataFromBinary()">Get Data</button>
+        </div>
+        <div class="mt-3">
+            @if (_weatherForecasts != null)
             {
-                <tr>
-                    <td>@forecast.Date.ToShortDateString()</td>
-                    <td>@forecast.TemperatureC</td>
-                    <td>@forecast.TemperatureF</td>
-                    <td>@forecast.Summary</td>
-                </tr>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>TemperatureC</th>
+                            <th>TemperatureF</th>
+                            <th>Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var forecast in _weatherForecasts)
+                        {
+                            <tr>
+                                <td>@forecast.Date.ToShortDateString()</td>
+                                <td>@forecast.TemperatureC</td>
+                                <td>@forecast.TemperatureF</td>
+                                <td>@forecast.Summary</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
             }
-        </tbody>
-    </table>
-}
-<script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" integrity="sha512-a+SUDuwNzXDvz4XrIcXHuCf089/iJAoN4lmrXJg18XnduKK6YlDHNRalv4yd1N40OKI80tFidF+rqTFKGPoWFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script type="module" src="~/js/decrypt.js"></script>
+            else if (IsGetDataFromBinary)
+            {
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-6">
+        <h2>
+            Data from Json
+        </h2>
+        <p>Start time (UTC): @(StartTimeFromJson.HasValue ? StartTimeFromJson.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <hr />
+
+        <p>Response Time - API (UTC): @(EndTimeResponseFromJson.HasValue ? EndTimeResponseFromJson.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>Total time Response - API (UTC): @(EndTimeResponseFromJson.HasValue && StartTimeFromJson.HasValue ? $"{EndTimeResponseFromJson.Value.Subtract(StartTimeFromJson.Value).TotalSeconds} s" : string.Empty)</p>
+        <hr />
+
+        <p>End time (UTC): @(EndTimeFromJson.HasValue ? EndTimeFromJson.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
+        <p>Total time Render view (UTC): @(EndTimeFromJson.HasValue && EndTimeResponseFromJson.HasValue ? $"{EndTimeFromJson.Value.Subtract(EndTimeResponseFromJson.Value).TotalSeconds} s" : string.Empty)</p>
+        <hr />
+
+        <p>Total time (UTC): @(EndTimeFromJson.HasValue && StartTimeFromJson.HasValue ? $"{EndTimeFromJson.Value.Subtract(StartTimeFromJson.Value).TotalSeconds} s" : string.Empty)</p>
+        <div>
+            <button class="btn btn-primary" disabled="@(IsGetDataFromBinary || IsGetDataFromJson)" @onclick="() => GetDataFromJson()">Get Data</button>
+        </div>
+        <div class="mt-3">
+            @if (_weatherForecastsJson != null)
+            {
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>TemperatureC</th>
+                            <th>TemperatureF</th>
+                            <th>Summary</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var forecast in _weatherForecastsJson)
+                        {
+                            <tr>
+                                <td>@forecast.Date.ToShortDateString()</td>
+                                <td>@forecast.TemperatureC</td>
+                                <td>@forecast.TemperatureF</td>
+                                <td>@forecast.Summary</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else if (IsGetDataFromJson)
+            {
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            }
+
+        </div>
+    </div>
+</div>
+
 
 @code {
     private List<WeatherForecast>? _weatherForecasts;
+    private List<WeatherForecast>? _weatherForecastsJson;
     private HubConnection? _dataHubConnection;
+    private HubConnection? _dataHubConnectionJson;
+
+    private DateTime? StartTimeFromBinary;
+    private DateTime? StartTimeEncrypted;
+    private DateTime? EndTimeEncrypted;
+    private DateTime? EndTimeResponseFromBinary;
+    private DateTime? StartTimeDecrypted;
+    private DateTime? EndTimeDecrypted;
+    private DateTime? EndTimeFromBinary;
+
+    private DateTime? StartTimeFromJson;
+    private DateTime? EndTimeFromJson;
+    private DateTime? EndTimeResponseFromJson;
+
+    private bool IsGetDataFromBinary = false;
+    private bool IsGetDataFromJson = false;
     private const string _key = "SECRETKEYUSEDSYMMETRICENCRYPTION";
     private const string _iv = "19xj02lop5n9t8aw";
 
+    private async Task GetDataFromBinary()
+    {
+        IsGetDataFromBinary = true;
+        _weatherForecasts = null;
+        if (_dataHubConnection != null)
+        {
+            StartTimeFromBinary = DateTime.UtcNow;
+            StartTimeEncrypted = null;
+            EndTimeEncrypted = null;
+            EndTimeResponseFromBinary = null;
+            StartTimeDecrypted = null;
+            EndTimeDecrypted = null;
+            EndTimeFromBinary = null;
+            await _dataHubConnection.InvokeAsync("GetWeatherData");
+        }
+    }
+
+    private async Task GetDataFromJson()
+    {
+        IsGetDataFromJson = true;
+        _weatherForecastsJson = null;
+        if (_dataHubConnectionJson != null)
+        {
+            StartTimeFromJson = DateTime.UtcNow;
+            EndTimeResponseFromJson = null;
+            EndTimeFromJson = null;
+            await _dataHubConnectionJson.InvokeAsync("GetWeatherDataJson");
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
-        var apiAddress = "https://10.148.0.2:8080";
-        // var apiAddress = "https://localhost:7011";
+        // var apiAddress = "http://103.22.218.131:8013";
+        // var apiAddress = "https://10.148.0.2:8080";
+        var apiAddress = "https://localhost:7011";
         var sensorDataUrl = ($"{apiAddress}/weatherHub");
         _dataHubConnection = new HubConnectionBuilder()
                         .WithUrl(sensorDataUrl)
                         .Build();
-
         await _dataHubConnection.StartAsync();
 
-        string encryptedData = await _dataHubConnection.InvokeAsync<string>("GetWeatherData");
-        _weatherForecasts = await DecryptString(encryptedData, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
+        var sensorDataUrlJson = ($"{apiAddress}/weatherHubJson");
+        _dataHubConnectionJson = new HubConnectionBuilder()
+                        .WithUrl(sensorDataUrlJson)
+                        .Build();
+        await _dataHubConnectionJson.StartAsync();
 
         // Đăng ký sự kiện để cập nhật dữ liệu khi có thay đổi từ SignalR
-        _dataHubConnection.On<string>("ReceiveWeatherData", async (data) =>
+        _dataHubConnection.On<WeatherForecastBinary>("GetWeatherData", async (data) =>
         {
-            _weatherForecasts = await DecryptString(data, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
+            EndTimeResponseFromBinary = DateTime.UtcNow;
+            StartTimeEncrypted = data.StartDateEncrypted;
+            EndTimeEncrypted = data.EndDateEncrypted;
+            StartTimeDecrypted = DateTime.UtcNow;
+            StateHasChanged();
+
+            var res = await DecryptString(data.EncryptedDataByte, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
+            EndTimeDecrypted = DateTime.UtcNow;
+            StateHasChanged();
+
+            _weatherForecasts = res;
+            IsGetDataFromBinary = false;
+            EndTimeFromBinary = DateTime.UtcNow;
             StateHasChanged();
         });
+
+        // Đăng ký sự kiện để cập nhật dữ liệu khi có thay đổi từ SignalR
+        _dataHubConnectionJson.On<List<WeatherForecast>?>("GetWeatherDataJson", (data) =>
+        {
+            EndTimeResponseFromJson = DateTime.UtcNow;
+            StateHasChanged();
+
+            var res = data; // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
+            _weatherForecastsJson = res;
+            IsGetDataFromJson = false;
+            EndTimeFromJson = DateTime.UtcNow;
+            StateHasChanged();
+        });
+
+        // string encryptedData = await _dataHubConnection.InvokeAsync<string>("GetWeatherData");
+        // _weatherForecasts = await DecryptString(encryptedData, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
+
+        // _weatherForecastsJson = await _dataHubConnection.InvokeAsync<List<WeatherForecast>>("GetWeatherDataJson");
+
+        // Đăng ký sự kiện để cập nhật dữ liệu khi có thay đổi từ SignalR
+        // _dataHubConnection.On<string>("ReceiveWeatherData", async (data) =>
+        // {
+        //     _weatherForecasts = await DecryptString(data, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
+        //     StateHasChanged();
+        // });
     }
 
-    private async Task<List<WeatherForecast>> DecryptString(string cipherText, string keyString, string iv)
+    // private async Task<List<WeatherForecast>> DecryptString(string cipherText, string keyString, string iv)
+    // {
+    //     var serialized = await _jsRuntime.InvokeAsync<List<WeatherForecast>>("methods.decryptAES", new
+    //     {
+    //         key = keyString,
+    //         iv = iv,
+    //         encryptedString = cipherText,
+    //     });
+
+    //     return serialized;
+    // }
+
+    private async Task<List<WeatherForecast>> DecryptString(byte[]? cipherText, string keyString, string iv)
     {
-        var serialized = await _jsRuntime.InvokeAsync<List<WeatherForecast>>("methods.decryptAES", new
+        var serialized = await _jsRuntime.InvokeAsync<List<WeatherForecast>>("methods.decompressByteArrayToString", new
         {
-            Key = keyString,
-            IV = iv,
-            encryptedString = cipherText
+            key = keyString,
+            iv = iv,
+            byteArray = cipherText,
+        });
+
+        return serialized;
+    }
+
+    private async Task<List<WeatherForecast>> DecryptString(string? cipherText, string keyString, string iv)
+    {
+        // var binaryData = Convert.FromBase64String(cipherText ?? string.Empty);
+        // using (MemoryStream ms = new MemoryStream(binaryData))
+        // using (BsonReader reader = new BsonReader(ms))
+        // {
+        //     JsonSerializer serializer = new JsonSerializer();
+        //     var data = serializer.Deserialize<List<WeatherForecast>>(reader) ?? new List<WeatherForecast>();
+        //     return data;
+        // }
+
+        var serialized = await _jsRuntime.InvokeAsync<List<WeatherForecast>>("methods.decompressByteStringToString", new
+        {
+            key = keyString,
+            iv = iv,
+            byteString = cipherText,
         });
 
         return serialized;

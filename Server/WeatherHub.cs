@@ -1,43 +1,78 @@
 ﻿using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.AspNetCore.SignalR;
+using Newtonsoft.Json.Bson;
+using Newtonsoft.Json;
 using System.Security.Cryptography;
 using System.Security.Cryptography.Xml;
 using System.Text;
-using System.Text.Json;
+using System.IO;
+using System.Numerics;
+using System.Runtime.Serialization.Formatters.Binary;
+using MessagePack;
+//using System.Text.Json;
 
 namespace Server
 {
     public class WeatherHub : Hub
     {
-        private readonly List<WeatherForecast> _weatherData;
         private const string _key = "SECRETKEYUSEDSYMMETRICENCRYPTION";
         private const string _iv = "19xj02lop5n9t8aw";
 
-        public WeatherHub(List<WeatherForecast> weatherData)
+        //private readonly List<WeatherForecast> _weatherData;
+        //public WeatherHub(WeatherForecastBinary weatherForecastBinary)
+        //{
+        //    _weatherData = weatherForecastBinary.WeatherForecasts;
+        //}
+
+        public async Task GetWeatherData()
         {
-            _weatherData = weatherData;
+            // Đọc dữ liệu từ file JSON và đăng ký nó như một singleton service
+            var dataBinary = File.ReadAllText("WeatherData.json");
+            var weatherData = JsonConvert.DeserializeObject<List<WeatherForecast>>(dataBinary);
+            var weatherForecastBinary = new WeatherForecastBinary();
+            string jsonData = JsonConvert.SerializeObject(weatherData);
+            var messagePackData = MessagePackSerializer.Serialize(jsonData);
+
+            //MemoryStream ms = new MemoryStream();
+            //using (BsonWriter writer = new BsonWriter(ms))
+            //{
+            //    JsonSerializer serializer = new JsonSerializer();
+            //    serializer.Serialize(writer, weatherData);
+            //}
+            //string data = Convert.ToBase64String(ms.ToArray());
+
+            //JsonSerializer jsonSerializer = new JsonSerializer();
+            //MemoryStream objBsonMemoryStream = new MemoryStream();
+            //BsonWriter bsonWriterObject = new BsonWriter(objBsonMemoryStream);
+            //jsonSerializer.Serialize(bsonWriterObject, weatherData);
+
+            weatherForecastBinary.EndDateEncrypted = DateTime.UtcNow;
+            weatherForecastBinary.EncryptedDataByte = messagePackData;
+            await Clients.All.SendAsync("GetWeatherData", weatherForecastBinary);
         }
 
-        public async Task<string> GetWeatherData()
-        {
-            string jsonData = JsonSerializer.Serialize(_weatherData);
-            string encryptedData = EncryptString(jsonData, _key); // Hàm mã hóa của bạn
-            return encryptedData;
-        }
+        //public async Task GetWeatherData()
+        //{
+        //    // Đọc dữ liệu từ file JSON và đăng ký nó như một singleton service
+        //    var dataBinary = File.ReadAllText("WeatherData.json");
+        //    var weatherData = JsonSerializer.Deserialize<List<WeatherForecast>>(dataBinary);
 
-        public async Task UpdateWeatherData(string encryptedData)
-        {
-            string decryptedData = EncryptString(encryptedData, _key); // Hàm giải mã của bạn
-            var updatedData = JsonSerializer.Deserialize<List<WeatherForecast>>(decryptedData);
+        //    var data = new WeatherForecastBinary();
+        //    string jsonData = JsonSerializer.Serialize(weatherData);
+        //    string encryptedData = EncryptString(jsonData, _key); // Hàm mã hóa của bạn
 
-            // Cập nhật dữ liệu và broadcast lại cho tất cả các client
-            _weatherData.Clear();
-            if(updatedData != null)
-            {
-                _weatherData.AddRange(updatedData);
-            }
-            await Clients.All.SendAsync("ReceiveWeatherData", updatedData);
-        }
+        //    data.EndDateEncrypted = DateTime.UtcNow;
+        //    data.EncryptedData = encryptedData;
+        //    await Clients.All.SendAsync("GetWeatherData", data);
+        //}
+
+        //public async Task UpdateWeatherData(string encryptedData)
+        //{
+        //    string decryptedData = EncryptString(encryptedData, _key); // Hàm giải mã của bạn
+        //    var updatedData = JsonSerializer.Deserialize<List<WeatherForecast>>(decryptedData);
+
+        //    await Clients.All.SendAsync("ReceiveWeatherData", updatedData);
+        //}
 
         public static string EncryptString(string text, string keyString)
         {

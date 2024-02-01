@@ -25,13 +25,20 @@ builder.Services.AddCors(options =>
         });
 });
 
-// Đọc dữ liệu từ file JSON và đăng ký nó như một singleton service
-var json = File.ReadAllText("WeatherData.json");
-var weatherData = JsonSerializer.Deserialize<List<WeatherForecast>>(json);
-if(weatherData != null)
-{
-    builder.Services.AddSingleton(weatherData);
-}
+//// Đọc dữ liệu từ file JSON và đăng ký nó như một singleton service
+//var dataBinary = File.ReadAllText("WeatherData.json");
+//var weatherForecastBinary = new WeatherForecastBinary { WeatherForecasts = JsonSerializer.Deserialize<List<WeatherForecast>>(dataBinary) ?? new List<WeatherForecast>() };
+//if (weatherForecastBinary != null)
+//{
+//    builder.Services.AddSingleton(weatherForecastBinary);
+//}
+
+//var dataJson = File.ReadAllText("WeatherDataJson.json");
+//var weatherForecastJson = new WeatherForecastJson { WeatherForecasts = JsonSerializer.Deserialize<List<WeatherForecast>>(dataJson) ?? new List<WeatherForecast>() };
+//if (weatherForecastJson != null)
+//{
+//    builder.Services.AddSingleton(weatherForecastJson);
+//}
 
 var app = builder.Build();
 
@@ -58,6 +65,7 @@ app.UseEndpoints(endpoints =>
     endpoints.MapControllers();
     // Kích hoạt SignalR hub
     endpoints.MapHub<WeatherHub>("/weatherHub");
+    endpoints.MapHub<WeatherHubJson>("/weatherHubJson");
 });
 
 app.Run();
