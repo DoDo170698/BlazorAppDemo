@@ -20,24 +20,14 @@
         <p>Start time (UTC): @(StartTimeFromBinary.HasValue ? StartTimeFromBinary.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
         <hr />
 
-        <p>Start Encrypted (UTC): @(StartTimeEncrypted.HasValue ? StartTimeEncrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
-        <p>End Encrypted (UTC): @(EndTimeEncrypted.HasValue ? EndTimeEncrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
-        <p>Total time Encrypted (UTC): @(EndTimeEncrypted.HasValue && StartTimeEncrypted.HasValue ? $"{EndTimeEncrypted.Value.Subtract(StartTimeEncrypted.Value).TotalSeconds} s" : string.Empty)</p>
-        <hr />
-
         <p>Response Time - API (UTC): @(EndTimeResponseFromBinary.HasValue ? EndTimeResponseFromBinary.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
         <p>Total time Response - API (UTC): @(EndTimeResponseFromBinary.HasValue && StartTimeFromBinary.HasValue ? $"{EndTimeResponseFromBinary.Value.Subtract(StartTimeFromBinary.Value).TotalSeconds} s" : string.Empty)</p>
         <hr />
 
-        <p>Start Decrypted (UTC): @(StartTimeDecrypted.HasValue ? StartTimeDecrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
-        <p>End Decrypted (UTC): @(EndTimeDecrypted.HasValue ? EndTimeDecrypted.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
-        <p>Total time Decrypted (UTC): @(EndTimeDecrypted.HasValue && StartTimeDecrypted.HasValue ? $"{EndTimeDecrypted.Value.Subtract(StartTimeDecrypted.Value).TotalSeconds} s" : string.Empty)</p>
-        <hr />
-
-        <p>End time (UTC): @(EndTimeFromBinary.HasValue ? EndTimeFromBinary.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
         <p>Total time Render view (UTC): @(EndTimeFromBinary.HasValue && EndTimeResponseFromBinary.HasValue ? $"{EndTimeFromBinary.Value.Subtract(EndTimeResponseFromBinary.Value).TotalSeconds} s" : string.Empty)</p>
         <hr />
 
+        <p>End time (UTC): @(EndTimeFromBinary.HasValue ? EndTimeFromBinary.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
         <p>Total time (UTC): @(EndTimeFromBinary.HasValue && StartTimeFromBinary.HasValue ? $"{EndTimeFromBinary.Value.Subtract(StartTimeFromBinary.Value).TotalSeconds} s" : string.Empty)</p>
         <div>
             <button class="btn btn-primary" disabled="@(IsGetDataFromBinary || IsGetDataFromJson)" @onclick="() => GetDataFromBinary()">Get Data</button>
@@ -86,10 +76,10 @@
         <p>Total time Response - API (UTC): @(EndTimeResponseFromJson.HasValue && StartTimeFromJson.HasValue ? $"{EndTimeResponseFromJson.Value.Subtract(StartTimeFromJson.Value).TotalSeconds} s" : string.Empty)</p>
         <hr />
 
-        <p>End time (UTC): @(EndTimeFromJson.HasValue ? EndTimeFromJson.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
         <p>Total time Render view (UTC): @(EndTimeFromJson.HasValue && EndTimeResponseFromJson.HasValue ? $"{EndTimeFromJson.Value.Subtract(EndTimeResponseFromJson.Value).TotalSeconds} s" : string.Empty)</p>
         <hr />
 
+        <p>End time (UTC): @(EndTimeFromJson.HasValue ? EndTimeFromJson.Value.ToString("dd/MM/yyyy HH:mm:ss.ffff") : string.Empty)</p>
         <p>Total time (UTC): @(EndTimeFromJson.HasValue && StartTimeFromJson.HasValue ? $"{EndTimeFromJson.Value.Subtract(StartTimeFromJson.Value).TotalSeconds} s" : string.Empty)</p>
         <div>
             <button class="btn btn-primary" disabled="@(IsGetDataFromBinary || IsGetDataFromJson)" @onclick="() => GetDataFromJson()">Get Data</button>
@@ -138,11 +128,7 @@
     private HubConnection? _dataHubConnectionJson;
 
     private DateTime? StartTimeFromBinary;
-    private DateTime? StartTimeEncrypted;
-    private DateTime? EndTimeEncrypted;
     private DateTime? EndTimeResponseFromBinary;
-    private DateTime? StartTimeDecrypted;
-    private DateTime? EndTimeDecrypted;
     private DateTime? EndTimeFromBinary;
 
     private DateTime? StartTimeFromJson;
@@ -161,11 +147,7 @@
         if (_dataHubConnection != null)
         {
             StartTimeFromBinary = DateTime.UtcNow;
-            StartTimeEncrypted = null;
-            EndTimeEncrypted = null;
             EndTimeResponseFromBinary = null;
-            StartTimeDecrypted = null;
-            EndTimeDecrypted = null;
             EndTimeFromBinary = null;
             await _dataHubConnection.InvokeAsync("GetWeatherData");
         }
@@ -202,16 +184,12 @@
         await _dataHubConnectionJson.StartAsync();
 
         // Đăng ký sự kiện để cập nhật dữ liệu khi có thay đổi từ SignalR
-        _dataHubConnection.On<WeatherForecastBinary>("GetWeatherData", async (data) =>
+        _dataHubConnection.On<byte[]>("GetWeatherData", async (data) =>
         {
             EndTimeResponseFromBinary = DateTime.UtcNow;
-            StartTimeEncrypted = data.StartDateEncrypted;
-            EndTimeEncrypted = data.EndDateEncrypted;
-            StartTimeDecrypted = DateTime.UtcNow;
             StateHasChanged();
 
-            var res = await DecryptString(data.EncryptedDataByte, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
-            EndTimeDecrypted = DateTime.UtcNow;
+            var res = await DecryptString(data, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
             StateHasChanged();
 
             _weatherForecasts = res;
@@ -232,31 +210,7 @@
             EndTimeFromJson = DateTime.UtcNow;
             StateHasChanged();
         });
-
-        // string encryptedData = await _dataHubConnection.InvokeAsync<string>("GetWeatherData");
-        // _weatherForecasts = await DecryptString(encryptedData, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
-
-        // _weatherForecastsJson = await _dataHubConnection.InvokeAsync<List<WeatherForecast>>("GetWeatherDataJson");
-
-        // Đăng ký sự kiện để cập nhật dữ liệu khi có thay đổi từ SignalR
-        // _dataHubConnection.On<string>("ReceiveWeatherData", async (data) =>
-        // {
-        //     _weatherForecasts = await DecryptString(data, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
-        //     StateHasChanged();
-        // });
     }
-
-    // private async Task<List<WeatherForecast>> DecryptString(string cipherText, string keyString, string iv)
-    // {
-    //     var serialized = await _jsRuntime.InvokeAsync<List<WeatherForecast>>("methods.decryptAES", new
-    //     {
-    //         key = keyString,
-    //         iv = iv,
-    //         encryptedString = cipherText,
-    //     });
-
-    //     return serialized;
-    // }
 
     private async Task<List<WeatherForecast>> DecryptString(byte[]? cipherText, string keyString, string iv)
     {
@@ -265,27 +219,6 @@
             key = keyString,
             iv = iv,
             byteArray = cipherText,
-        });
-
-        return serialized;
-    }
-
-    private async Task<List<WeatherForecast>> DecryptString(string? cipherText, string keyString, string iv)
-    {
-        // var binaryData = Convert.FromBase64String(cipherText ?? string.Empty);
-        // using (MemoryStream ms = new MemoryStream(binaryData))
-        // using (BsonReader reader = new BsonReader(ms))
-        // {
-        //     JsonSerializer serializer = new JsonSerializer();
-        //     var data = serializer.Deserialize<List<WeatherForecast>>(reader) ?? new List<WeatherForecast>();
-        //     return data;
-        // }
-
-        var serialized = await _jsRuntime.InvokeAsync<List<WeatherForecast>>("methods.decompressByteStringToString", new
-        {
-            key = keyString,
-            iv = iv,
-            byteString = cipherText,
         });
 
         return serialized;
