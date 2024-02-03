@@ -137,6 +137,8 @@
 
     private bool IsGetDataFromBinary = false;
     private bool IsGetDataFromJson = false;
+    private bool IsRenderViewFromBinary = false;
+    private bool IsRenderViewFromJson = false;
     private const string _key = "SECRETKEYUSEDSYMMETRICENCRYPTION";
     private const string _iv = "19xj02lop5n9t8aw";
 
@@ -166,6 +168,22 @@
         }
     }
 
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (IsRenderViewFromBinary)
+        {
+            EndTimeFromBinary = DateTime.UtcNow; 
+            IsRenderViewFromBinary = false;
+            StateHasChanged();
+        }
+        if (IsRenderViewFromJson)
+        {
+            EndTimeFromJson = DateTime.UtcNow;
+            IsRenderViewFromJson = false;
+            StateHasChanged();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         // var apiAddress = "http://103.22.218.131:8013";
@@ -187,14 +205,15 @@
         _dataHubConnection.On<byte[]>("GetWeatherData", async (data) =>
         {
             EndTimeResponseFromBinary = DateTime.UtcNow;
-            StateHasChanged();
 
             var res = await DecryptString(data, _key, _iv); // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
-            StateHasChanged();
 
             _weatherForecasts = res;
             IsGetDataFromBinary = false;
-            EndTimeFromBinary = DateTime.UtcNow;
+
+            // EndTimeFromBinary = DateTime.UtcNow;
+
+            IsRenderViewFromBinary = true;
             StateHasChanged();
         });
 
@@ -202,12 +221,14 @@
         _dataHubConnectionJson.On<List<WeatherForecast>?>("GetWeatherDataJson", (data) =>
         {
             EndTimeResponseFromJson = DateTime.UtcNow;
-            StateHasChanged();
 
             var res = data; // Thay thế "YourSecretKey" bằng khóa bảo mật thật của bạn
             _weatherForecastsJson = res;
             IsGetDataFromJson = false;
-            EndTimeFromJson = DateTime.UtcNow;
+
+            // EndTimeFromJson = DateTime.UtcNow;
+
+            IsRenderViewFromJson = true;
             StateHasChanged();
         });
     }
