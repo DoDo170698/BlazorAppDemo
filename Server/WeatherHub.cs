@@ -9,6 +9,8 @@ using System.IO;
 using System.Numerics;
 using System.Runtime.Serialization.Formatters.Binary;
 using MessagePack;
+using Newtonsoft.Json.Linq;
+using System.ComponentModel;
 //using System.Text.Json;
 
 namespace Server
@@ -21,11 +23,13 @@ namespace Server
         public async Task GetWeatherData()
         {
             // Đọc dữ liệu từ file JSON và đăng ký nó như một singleton service
-            var dataBinary = File.ReadAllText("WeatherData.json");
-            var weatherData = JsonConvert.DeserializeObject<List<WeatherForecast>>(dataBinary);
+            //var dataBinary = File.ReadAllText("WeatherData.json");
+            //var weatherData = JsonConvert.DeserializeObject<List<WeatherForecast>>(dataBinary);
+            //string jsonData = JsonConvert.SerializeObject(weatherData);
+            //var messagePackData = Encoding.UTF8.GetBytes(jsonData);
 
-            string jsonData = JsonConvert.SerializeObject(weatherData);
-            var messagePackData = MessagePackSerializer.Serialize(jsonData);
+            var dataBinary = File.ReadAllText("WeatherData.txt");
+            var messagePackData = Convert.FromBase64String(dataBinary);
 
             await Clients.All.SendAsync("GetWeatherData", messagePackData);
         }
