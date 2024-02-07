@@ -49,16 +49,17 @@ app.UseSwaggerUI();
 app.UseCors();
 
 app.UseDefaultFiles();
+app.UseStaticFiles();
 
-app.UseStaticFiles(new StaticFileOptions()
-{
-    OnPrepareResponse = context =>
-    {
-        context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
-        context.Context.Response.Headers["Pragma"] = "no-cache";
-        context.Context.Response.Headers.Add("Expires", "-1");
-    }
-});
+//app.UseStaticFiles(new StaticFileOptions()
+//{
+//    OnPrepareResponse = context =>
+//    {
+//        context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
+//        context.Context.Response.Headers["Pragma"] = "no-cache";
+//        context.Context.Response.Headers.Add("Expires", "-1");
+//    }
+//});
 
 app.UseHttpsRedirection();
 

@@ -22,16 +22,10 @@ namespace Server
 
         public async Task GetWeatherData()
         {
-            // Đọc dữ liệu từ file JSON và đăng ký nó như một singleton service
-            //var dataBinary = File.ReadAllText("WeatherData.json");
-            //var weatherData = JsonConvert.DeserializeObject<List<WeatherForecast>>(dataBinary);
-            //string jsonData = JsonConvert.SerializeObject(weatherData);
-            //var messagePackData = Encoding.UTF8.GetBytes(jsonData);
+            var dataBinary = await File.ReadAllTextAsync("WeatherData.txt");
+            //var messagePackData = Convert.FromBase64String(dataBinary);
 
-            var dataBinary = File.ReadAllText("WeatherData.txt");
-            var messagePackData = Convert.FromBase64String(dataBinary);
-
-            await Clients.All.SendAsync("GetWeatherData", messagePackData);
+            await Clients.All.SendAsync("GetWeatherData", dataBinary);
         }
     }
 }

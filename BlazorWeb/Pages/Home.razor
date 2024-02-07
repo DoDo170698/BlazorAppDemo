@@ -146,8 +146,11 @@
     {
         IsGetDataFromBinary = true;
         _weatherForecasts = null;
+
         if (_dataHubConnection != null)
         {
+            await _dataHubConnection.StartAsync();
+
             StartTimeFromBinary = DateTime.UtcNow;
             EndTimeResponseFromBinary = null;
             EndTimeFromBinary = null;
@@ -159,8 +162,11 @@
     {
         IsGetDataFromJson = true;
         _weatherForecastsJson = null;
+
         if (_dataHubConnectionJson != null)
         {
+            await _dataHubConnectionJson.StartAsync();
+
             StartTimeFromJson = DateTime.UtcNow;
             EndTimeResponseFromJson = null;
             EndTimeFromJson = null;
@@ -193,16 +199,16 @@
         _dataHubConnection = new HubConnectionBuilder()
                         .WithUrl(sensorDataUrl)
                         .Build();
-        await _dataHubConnection.StartAsync();
+        // await _dataHubConnection.StartAsync();
 
         var sensorDataUrlJson = ($"{apiAddress}/weatherHubJson");
         _dataHubConnectionJson = new HubConnectionBuilder()
                         .WithUrl(sensorDataUrlJson)
                         .Build();
-        await _dataHubConnectionJson.StartAsync();
+        // await _dataHubConnectionJson.StartAsync();
 
         // Đăng ký sự kiện để cập nhật dữ liệu khi có thay đổi từ SignalR
-        _dataHubConnection.On<byte[]>("GetWeatherData", async (data) =>
+        _dataHubConnection.On<string>("GetWeatherData", async (data) =>
         {
             EndTimeResponseFromBinary = DateTime.UtcNow;
 
@@ -215,10 +221,13 @@
 
             IsRenderViewFromBinary = true;
             StateHasChanged();
+
+            await _dataHubConnection.StopAsync();
+            // await _dataHubConnection.DisposeAsync();
         });
 
         // Đăng ký sự kiện để cập nhật dữ liệu khi có thay đổi từ SignalR
-        _dataHubConnectionJson.On<List<WeatherForecast>?>("GetWeatherDataJson", (data) =>
+        _dataHubConnectionJson.On<List<WeatherForecast>?>("GetWeatherDataJson", async (data) =>
         {
             EndTimeResponseFromJson = DateTime.UtcNow;
 
@@ -230,7 +239,22 @@
 
             IsRenderViewFromJson = true;
             StateHasChanged();
+
+            await _dataHubConnectionJson.StopAsync();
+            // await _dataHubConnectionJson.DisposeAsync();
         });
+    }
+
+    private async Task<List<WeatherForecast>> DecryptString(string? cipherText, string keyString, string iv)
+    {
+        var serialized = await _jsRuntime.InvokeAsync<List<WeatherForecast>>("methods.decompressByteStringToString", new
+        {
+            key = keyString,
+            iv = iv,
+            byteString = cipherText,
+        });
+
+        return serialized;
     }
 
     private async Task<List<WeatherForecast>> DecryptString(byte[]? cipherText, string keyString, string iv)
